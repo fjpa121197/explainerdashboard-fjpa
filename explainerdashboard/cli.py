@@ -106,14 +106,31 @@ def build_and_dump_explainer(explainer_config, dashboard_config=None):
     return
 
 
-def launch_dashboard_from_pkl(explainer_filepath, no_browser, port, no_dashboard=False):
+def launch_dashboard_from_pkl(explainer_filepath, no_browser, port, title_dashboard, show_metrics, no_dashboard=False):
     explainer = BaseExplainer.from_file(explainer_filepath)
 
     if port is None: 
         click.echo(f"explainerdashboard ===> Setting port to 8050, override with e.g. --port 8051")
         port = 8050
 
-    db = ExplainerDashboard(explainer, port=port)
+    if title_dashboard is None:
+        click.echo(f"explainerdashboard ===> No title for dashboard provided - using default one")
+    else:
+        click.echo(f"explainerdashboard ===> Setting title of dashboard with {title_dashboard}")
+
+    if show_metrics is None:
+        click.echo(f"explainerdashboard ===> No specific metrics provided - using all default ones")
+    else:
+        click.echo(f"explainerdashboard ===> Specific metrics provided - will use: {show_metrics}")
+        print(show_metrics)
+
+        metrics_list = show_metrics.split(',')
+        print(metrics_list)
+        print(type(metrics_list))
+
+    
+
+    db = ExplainerDashboard(explainer, port=port, title= title_dashboard, show_metrics = show_metrics)
     
     if not no_browser and not os.environ.get("WERKZEUG_RUN_MAIN"):
         webbrowser.open_new(f"http://127.0.0.1:{port}/")
@@ -271,7 +288,12 @@ def explainerdashboard_cli(ctx):
                  help="Launch a dashboard, but do not launch a browser.")
 @click.option("--port", "-p", "port", default=None,
                 help="port to run dashboard on defaults.")
-def run(ctx, explainer_filepath, no_browser, port):
+@click.option("--title-dashboard", "-t", "title_dashboard", is_flag=True, default=None,
+                 help="Provide an specific title to dashboard (based on user input).")
+@click.option("--metrics", "-m", "show_metrics", is_flag=True, default=None,
+                 help="Limit the type of metrics to be used in problems stats. It takes a string Example of input: mean-absolute-error,mean-squared-error,root-mean-squared-error,R-squared")
+
+def run(ctx, explainer_filepath, no_browser, port, title_dashboard, show_metrics):
     click.echo(explainer_ascii)
     if explainer_filepath is None:
         if (Path().cwd() / "dashboard.yaml").exists():
@@ -287,7 +309,7 @@ def run(ctx, explainer_filepath, no_browser, port):
         str(explainer_filepath).endswith(".pkl") or
         str(explainer_filepath).endswith(".pickle") or
         str(explainer_filepath).endswith(".dill")):
-        launch_dashboard_from_pkl(explainer_filepath, no_browser, port)
+        launch_dashboard_from_pkl(explainer_filepath, no_browser, port, title_dashboard, show_metrics)
         return
     elif str(explainer_filepath).endswith(".yaml"):
         launch_dashboard_from_yaml(explainer_filepath, no_browser, port)
